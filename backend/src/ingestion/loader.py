@@ -70,6 +70,11 @@ def load_all_documents(folder_path: str) -> List[Dict]:
 
 
 if __name__ == "__main__":
-    # Quick manual test
-    docs = load_all_documents("backend/data/raw")
+    # Resolve path relative to THIS file's location, not wherever the terminal happens to be.
+    # loader.py lives at backend/src/ingestion/loader.py
+    # so we go up 3 levels to reach backend/, then into data/raw
+    current_dir = Path(__file__).resolve().parent
+    raw_data_path = current_dir.parent.parent / "data" / "raw"
+
+    docs = load_all_documents(str(raw_data_path))
     print(f"\nTotal documents loaded: {len(docs)}")
