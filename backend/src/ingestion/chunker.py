@@ -1,6 +1,12 @@
-from typing import List, Dict
+import sys
 from pathlib import Path
+from typing import List, Dict
 import re
+
+# Allow imports from sibling folders (security)
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from security.rbac import get_allowed_roles, load_permissions
+
 
 def split_into_paragraphs(text: str) -> List[str]:
     """Split text into paragraphs, cleaning up whitespace."""
@@ -24,7 +30,6 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
         else:
             if current_chunk:
                 chunks.append(current_chunk.strip())
-            # start new chunk, carry a small overlap from the end of the last one
             overlap_text = current_chunk[-overlap:] if overlap and current_chunk else ""
             current_chunk = overlap_text + para + "\n\n"
 
@@ -36,19 +41,23 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
 
 def chunk_documents(documents: List[Dict], chunk_size: int = 500, overlap: int = 50) -> List[Dict]:
     """
-    Take loaded documents and produce chunk-level records with metadata.
-    Each chunk becomes its own record, ready for embedding + indexing.
+    Take loaded documents and produce chunk-level records with metadata,
+    including RBAC role permissions per source document.
     """
     all_chunks = []
+    permissions = load_permissions()
 
     for doc in documents:
         chunks = chunk_text(doc["content"], chunk_size, overlap)
+        allowed_roles = get_allowed_roles(doc["filename"], permissions)
+
         for i, chunk in enumerate(chunks):
             all_chunks.append({
                 "text": chunk,
                 "source": doc["filename"],
                 "chunk_id": f"{doc['filename']}_{i}",
                 "chunk_index": i,
+                "allowed_roles": ",".join(allowed_roles),
             })
 
     return all_chunks
@@ -57,7 +66,6 @@ def chunk_documents(documents: List[Dict], chunk_size: int = 500, overlap: int =
 if __name__ == "__main__":
     from loader import load_all_documents
 
-    # Resolve path relative to THIS file's location, not the terminal's cwd
     current_dir = Path(__file__).resolve().parent
     raw_data_path = current_dir.parent.parent / "data" / "raw"
 
@@ -67,3 +75,4 @@ if __name__ == "__main__":
     print(f"\nTotal chunks created: {len(chunks)}")
     if chunks:
         print(f"\nSample chunk:\n{chunks[0]['text'][:200]}...")
+        print(f"Allowed roles: {chunks[0]['allowed_roles']}")
