@@ -1,0 +1,9 @@
+{
+  "CONFIDENTIAL_Compensation_Bands.pdf": ["hr", "leadership"],
+  "Leave_Policy.txt": ["employee", "hr", "leadership"],
+  "Onboarding_Guide.txt": ["employee", "hr", "leadership"],
+  "IT_Security_Policy.txt": ["employee", "hr", "leadership"],
+  "Product_Engineering_Handbook.pdf": ["employee", "hr", "leadership"],
+  "default": ["employee", "hr", "leadership"],
+  "Company_Profile.txt": ["employee", "hr", "leadership"]
+}
