@@ -21,3 +21,4 @@ TOP_K = 5
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 COLLECTION_NAME = "company_knowledge_base"
+COMPANY_NAME = "Nexora Technologies"
