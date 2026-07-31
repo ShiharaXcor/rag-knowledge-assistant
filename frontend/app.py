@@ -1,31 +1,24 @@
 import streamlit as st
+import requests
 import sys
 from pathlib import Path
 
-BACKEND_SRC = Path(__file__).resolve().parent.parent / "backend" / "src"
-sys.path.append(str(BACKEND_SRC))
 sys.path.append(str(Path(__file__).resolve().parent))
-
-from retrieval.vector_store import query_store
-from generation.llm import generate_answer_guarded
 from style_utils import get_custom_css
+
+API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Company Knowledge Assistant", layout="wide", page_icon="🔒")
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
-# --- Sidebar: role switcher (demo of RBAC) ---
 with st.sidebar:
     st.markdown("### 🔒 Company Knowledge Assistant")
     st.markdown("---")
     st.markdown("**Viewing as:**")
-    user_role = st.selectbox(
-        "Role",
-        options=["employee", "hr", "leadership"],
-        label_visibility="collapsed",
-    )
+    user_role = st.selectbox("Role", options=["employee", "hr", "leadership"], label_visibility="collapsed")
     st.markdown(f'<span class="role-badge">{user_role.upper()}</span>', unsafe_allow_html=True)
     st.markdown("---")
-    st.caption("This role switcher demonstrates role-based access control. Confidential documents are only retrievable by permitted roles — filtering happens before the AI model ever sees the content.")
+    st.caption("This role switcher demonstrates role-based access control, enforced server-side via the FastAPI backend.")
     st.markdown("---")
     if st.button("🗑️ Clear conversation"):
         st.session_state.messages = []
@@ -54,8 +47,21 @@ if user_query:
 
     with st.chat_message("assistant"):
         with st.spinner("Searching knowledge base..."):
-            retrieved_chunks = query_store(user_query, user_role=user_role, top_k=3)
-            result = generate_answer_guarded(user_query, user_role, retrieved_chunks)
+            history = [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages[:-1]
+            ]
+
+            try:
+                response = requests.post(
+                    f"{API_URL}/chat",
+                    json={"query": user_query, "user_role": user_role, "chat_history": history},
+                    timeout=120,
+                )
+                response.raise_for_status()
+                result = response.json()
+            except requests.exceptions.RequestException as e:
+                result = {"answer": f"Error connecting to backend: {e}", "sources": [], "blocked": False}
 
         st.write(result["answer"])
 
